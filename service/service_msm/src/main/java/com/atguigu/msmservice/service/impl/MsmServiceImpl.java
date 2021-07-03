@@ -8,6 +8,10 @@ import com.aliyuncs.IAcsClient;
 import com.aliyuncs.http.MethodType;
 import com.aliyuncs.profile.DefaultProfile;
 import com.atguigu.msmservice.service.MsmService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -16,35 +20,26 @@ import java.util.Map;
 @Service
 public class MsmServiceImpl implements MsmService {
 
-    //发送短信的方法
+    @Autowired
+    JavaMailSenderImpl mailSender;
+    @Value("${spring.mail.username}")
+    private String from;
+
+
+
     @Override
-    public boolean send(Map<String, Object> param, String phone) {
-        if(StringUtils.isEmpty(phone)) return false;
-
-        DefaultProfile profile =
-                DefaultProfile.getProfile("default", "LTAI4FvvVEWiTJ3GNJJqJnk7", "9st82dv7EvFk9mTjYO1XXbM632fRbG");
-        IAcsClient client = new DefaultAcsClient(profile);
-
-        //设置相关固定的参数
-        CommonRequest request = new CommonRequest();
-        //request.setProtocol(ProtocolType.HTTPS);
-        request.setMethod(MethodType.POST);
-        request.setDomain("dysmsapi.aliyuncs.com");
-        request.setVersion("2017-05-25");
-        request.setAction("SendSms");
-
-        //设置发送相关的参数
-        request.putQueryParameter("PhoneNumbers",phone); //手机号
-        request.putQueryParameter("SignName","我的谷粒在线教育网站"); //申请阿里云 签名名称
-        request.putQueryParameter("TemplateCode","SMS_180051135"); //申请阿里云 模板code
-        request.putQueryParameter("TemplateParam", JSONObject.toJSONString(param)); //验证码数据，转换json数据传递
-
-        try {
-            //最终发送
-            CommonResponse response = client.getCommonResponse(request);
-            boolean success = response.getHttpResponse().isSuccess();
-            return success;
-        }catch(Exception e) {
+    public boolean sendByEmail(Map<String, Object> param, String email) {
+        if(StringUtils.isEmpty(email)) return false;
+        try{
+            String emailServiceCode = param.get("code").toString();
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setSubject("注册验证码");
+            message.setText("注册验证码是：" + emailServiceCode);
+            message.setTo(email);
+            message.setFrom(from);
+            mailSender.send(message);
+            return true;
+        }catch (Exception e){
             e.printStackTrace();
             return false;
         }
